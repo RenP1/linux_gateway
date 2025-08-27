@@ -5,4 +5,7 @@
     "C_Cpp.default.includePath": [
         "thirdparty"
     ],
+    "files.associations": {
+        "cjson.h": "c"
+    },
 }

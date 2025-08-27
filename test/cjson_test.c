@@ -1,5 +1,6 @@
 #include "cjson/cJSON.h"
 #include "log/log.h"
+#include <stdlib.h>
 
 int main(int argc, char const *argv[])
 {
