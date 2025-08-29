@@ -18,7 +18,7 @@ char *app_message_cjson2chars(char *cjson_str, int *str_len)
     int msg_len = strlen(msg_hex)/2;
     // 计算字符串的长度
     *str_len = id_len + msg_len + 3;
-    // 将字符串转换成十六进制串
+    // 将十六进制id和msg转换成字符串
     char *id_str = app_common_hex2chars(id_hex, *str_len);
     char *msg_str = app_common_hex2chars(msg_hex, *str_len);
     // 创建一个空的字符串
@@ -50,9 +50,9 @@ char *app_message_chars2cjson(char *chars)
     char msg_hex[msg_len];
     memcpy(id_hex, chars + 3, id_len);
     memcpy(msg_hex, chars + 3 + id_len, msg_len);
-    // 将十六进制id和msg转换成字符串
-    char *id_str = app_common_hex2chars(id_hex, id_len);
-    char *msg_str = app_common_hex2chars(msg_hex, msg_len);
+    // 将字符串转换成十六进制串
+    char *id_str = app_common_chars2hex(id_hex, id_len);
+    char *msg_str = app_common_chars2hex(msg_hex, msg_len);
     // 将字符串内容添加到JSON对象中
     cJSON_AddNumberToObject(root, "conn_type", conn_type);
     cJSON_AddStringToObject(root, "id", id_str);

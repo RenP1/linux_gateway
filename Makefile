@@ -22,3 +22,14 @@ app_message_test: $(app_message) test/app_message_test.c $(log) $(app_common) $(
 	gcc $^ -o $@ -I thirdparty -Iapp
 	./$@
 	-rm $@
+
+mqtt_test: test/mqtt_test.c
+	-gcc $^ -o $@ -lpaho-mqtt3c
+	-./$@
+	-rm $@
+
+app_mqtt:= app/app_mqtt.h app/app_mqtt.c
+app_mqtt_test: $(app_mqtt) test/app_mqtt_test.c $(log)
+	gcc $^ -o $@ -I thirdparty -Iapp -lpaho-mqtt3c
+	./$@
+	-rm $@
