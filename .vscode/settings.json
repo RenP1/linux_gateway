@@ -10,6 +10,8 @@
         "cjson.h": "c",
         "app_message.h": "c",
         "app_mqtt.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "stdio.h": "c",
+        "pthread.h": "c"
     },
 }
