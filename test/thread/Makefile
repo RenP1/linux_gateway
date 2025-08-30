@@ -21,3 +21,9 @@ race_condition_test: $(race_condition)
 	gcc $^ -o $@
 	./$@
 	-rm $@
+
+mqueue:= 05_mqueue.c
+mqueue_test: $(mqueue)
+	gcc $^ -o $@
+	./$@
+	-rm $@

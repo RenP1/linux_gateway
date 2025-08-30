@@ -12,6 +12,7 @@
         "app_mqtt.h": "c",
         "string.h": "c",
         "stdio.h": "c",
-        "pthread.h": "c"
+        "pthread.h": "c",
+        "mqueue.h": "c"
     },
 }
