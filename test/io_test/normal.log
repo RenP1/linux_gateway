@@ -1,0 +1,3 @@
+使用标准输出(STDOUT_FILENO)打印!!!
+使用标准输入(stdin)打印: d使用标准输出(stdout)打印!!!
+使用标准输入(STDIN_FILENO)打印: 
