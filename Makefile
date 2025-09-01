@@ -33,3 +33,9 @@ app_mqtt_test: $(app_mqtt) test/app_mqtt_test.c $(log)
 	gcc $^ -o $@ -I thirdparty -Iapp -lpaho-mqtt3c
 	./$@
 	-rm $@
+
+app_pool:= app/app_pool.h app/app_pool.c
+app_pool_test: $(app_pool) test/app_pool_test.c
+	gcc $^ -o $@ -I thirdparty -Iapp
+	./$@
+	-rm $@
