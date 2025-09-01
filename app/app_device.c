@@ -13,34 +13,6 @@
 
 static Device *device = NULL;
 
-Device *app_device_init(char *filename)
-{
-    // 保证只产生一个设备
-    if (device)
-    {
-        return device;
-    }
-    // 申请设备内存
-    device = (Device *)malloc(sizeof(Device));
-    // 初始化其属性
-    device->filename = filename;
-    device->fd = open(filename, O_RDWR);
-    device->up_buffer = app_buffer_init(BUFFER_SIZE);
-    device->down_buffer = app_buffer_init(BUFFER_SIZE);
-    device->is_running = 0;
-    device->post_read=NULL;
-    device->pre_write=NULL;
-
-    //初始化线程池模块
-    app_pool_init(POOL_SIZE);
-
-    //初始化mqtt模块
-    app_mqtt_init();
-
-    return device;
-}
-
-
 // 在线程池中某个分线程执行的任务函数
 static int send_task_fun(void *arg)
 {
@@ -70,11 +42,7 @@ static int send_task_fun(void *arg)
     return 0;
 }
 
-/**
- * @brief 不断读取串口数据的线程函数
- *
- * @return void*
- */
+// 线程函数: 不断读取串口数据的线程
 static void *read_thread_fun(void *arg)
 {
     while (device->is_running)
@@ -99,6 +67,45 @@ static void *read_thread_fun(void *arg)
 }
 
 
+/**
+ * @brief 初始化设备
+ * 
+ * @param filename 串口名
+ * @return Device* 唯一设备
+ */
+Device *app_device_init(char *filename)
+{
+    // 产生唯一设备
+    if (device)
+    {
+        return device;
+    }
+    // 申请设备内存
+    device = (Device *)malloc(sizeof(Device));
+    // 初始化其属性
+    device->filename = filename;
+    device->fd = open(filename, O_RDWR);
+    device->up_buffer = app_buffer_init(BUFFER_SIZE);
+    device->down_buffer = app_buffer_init(BUFFER_SIZE);
+    device->is_running = 0;
+    device->post_read=NULL;
+    device->pre_write=NULL;
+
+    //初始化线程池模块
+    app_pool_init(POOL_SIZE);
+
+    //初始化mqtt模块
+    app_mqtt_init();
+
+    return device;
+}
+
+
+/**
+ * @brief 设备启动
+ * 
+ * @return int 返回状态
+ */
 int app_device_start(void)
 {
     if (device->is_running)
@@ -113,6 +120,10 @@ int app_device_start(void)
     return 0;
 }
 
+/**
+ * @brief 销毁设备
+ * 
+ */
 void app_device_destory(void)
 {
     close(device->fd);
