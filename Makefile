@@ -39,3 +39,9 @@ app_pool_test: $(app_pool) test/app_pool_test.c
 	gcc $^ -o $@ -I thirdparty -Iapp
 	./$@
 	-rm $@
+
+app_buffer:= app/app_buffer.h app/app_buffer.c
+app_buffer_test: $(app_buffer) test/app_buffer_test.c $(log)
+	gcc $^ -o $@ -I thirdparty -Iapp
+	./$@
+	-rm $@

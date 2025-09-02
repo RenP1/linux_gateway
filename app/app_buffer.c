@@ -1,146 +1,123 @@
 #include "app_buffer.h"
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include "log/log.h"
+#include <pthread.h>
 
-// 初始化生成小缓冲区
-static SubBuffer *init_sub_buffer(int size)
+// 静态函数：初始化小buffer
+static SubBuffer *sub_buffer_init(int size)
 {
+    // 申请空间
     SubBuffer *sub_buffer = (SubBuffer *)malloc(sizeof(SubBuffer));
     sub_buffer->ptr = (char *)malloc(size);
     sub_buffer->size = size;
     sub_buffer->len = 0;
-
     return sub_buffer;
 }
 
-// 初始化缓冲区
+// 静态函数：交换读缓冲区和写缓冲区
+static void sub_buffer_swap(Buffer *buffer)
+{
+    log_debug("交互前,添加写锁");
+    pthread_mutex_lock(&buffer->write_lock);
+    int temp = buffer->read_buffer_index;
+    buffer->read_buffer_index = buffer->write_buffer_index;
+    buffer->write_buffer_index = temp;
+    log_debug("交互后,释放写锁");
+    pthread_mutex_unlock(&buffer->write_lock);
+}
+
 Buffer *app_buffer_init(int size)
 {
     // 申请内存
     Buffer *buffer = (Buffer *)malloc(sizeof(Buffer));
-
-    // 初始化内部属性
-    buffer->sub_buffers[0] = init_sub_buffer(size);
-    buffer->sub_buffers[1] = init_sub_buffer(size);
-    buffer->read_index = 0;
-    buffer->write_index = 1;
-
-    //初始化创建读锁和写锁
-    pthread_mutex_init(&buffer->read_lock,NULL);
-    pthread_mutex_init(&buffer->write_lock,NULL);
-
+    // 初始化小buffer
+    buffer->sub_buffer_list[0] = sub_buffer_init(size);
+    buffer->sub_buffer_list[1] = sub_buffer_init(size);
+    // 指定索引
+    buffer->write_buffer_index = 0;
+    buffer->read_buffer_index = 1;
+    // 初始化锁
+    pthread_mutex_init(&buffer->write_lock, NULL);
+    pthread_mutex_init(&buffer->read_lock, NULL);
+    // 返回buffer
     return buffer;
 }
 
-// 释放
 void app_buffer_free(Buffer *buffer)
 {
-    //先释放小缓冲区的内存，再释放小缓冲区的结构体
-    free(buffer->sub_buffers[0]->ptr);
-    free(buffer->sub_buffers[0]);
-    free(buffer->sub_buffers[1]->ptr);
-    free(buffer->sub_buffers[1]);
-    //再释放总缓冲区
+    free(buffer->sub_buffer_list[0]->ptr);
+    free(buffer->sub_buffer_list[0]);
+    free(buffer->sub_buffer_list[1]->ptr);
+    free(buffer->sub_buffer_list[1]);
     free(buffer);
 }
 
-// 写入数据
 int app_buffer_write(Buffer *buffer, char *data, int len)
 {
-    // 判断数据长度是否合法（不能超过255 => 下面会用一个字节来存储这个len）
+    // 判断写入数据是否超过一个字节
     if (len > 255)
     {
-        log_error("数据长度不合法,不能超过255...");
+        log_error("最多只能存储255长度数据!!!");
         return -1;
     }
-
-    //加写锁
-    log_debug("加写锁...");
+    log_debug("添加写锁");
     pthread_mutex_lock(&buffer->write_lock);
-
-    // 得到写的小buffer
-    SubBuffer *w_buffer = buffer->sub_buffers[buffer->write_index];
-
-    // 判断剩余空间是否足够
-    if (w_buffer->size - w_buffer->len < len + 1)
+    // 获取可写入的buffer
+    SubBuffer *w_buffer = buffer->sub_buffer_list[buffer->write_buffer_index];
+    // 判断是否还有空间写入数据
+    if (w_buffer->len + len + 1 > w_buffer->size)
     {
-        log_error("buffer剩余空间不足...");
-        //解写锁
+        log_error("写入数据长度超过buffer大小!!!");
+        log_debug("释放写锁");
         pthread_mutex_unlock(&buffer->write_lock);
         return -1;
     }
-
-    // 向小buffer中写入数据长度和数据
+    // 写入数据
     w_buffer->ptr[w_buffer->len] = len;
     memcpy(w_buffer->ptr + w_buffer->len + 1, data, len);
-
-    // 更新小buffer中的len
+    // 更新buffer长度
     w_buffer->len += len + 1;
-
-    //解写锁
-    log_debug("解写锁...");
+    log_debug("释放写锁");
     pthread_mutex_unlock(&buffer->write_lock);
-
     return 0;
 }
 
-//交换读写小缓冲区的下标
-//如果正在写，不能交互
-void swap_buf_bufer(Buffer *buffer)
+int app_buffer_read(Buffer *buffer, char *read_data, int buf_size)
 {
-    //加写锁
-    log_debug("交互前，加写锁...");
-    pthread_mutex_lock(&buffer->write_lock);
-    int tmp = buffer->read_index;
-    buffer->read_index = buffer->write_index;
-    buffer->write_index = tmp;
-    //解写锁
-    log_debug("交互后，解写锁...");
-    pthread_mutex_unlock(&buffer->write_lock);
-}
-
-// 读取数据
-int app_buffer_read(Buffer *buffer, char *data_buf, int buf_size)
-{
-    // 加读锁
-    log_debug("加读锁");
+    log_debug("添加读锁");
     pthread_mutex_lock(&buffer->read_lock);
-
-    // 得到读的小buffer
-    SubBuffer *r_buffer = buffer->sub_buffers[buffer->read_index];
-    // 如果当前读buffer为空，则切换一下小缓冲区
-    if (r_buffer->len == 0) {
-        swap_buf_bufer(buffer);
-        r_buffer = buffer->sub_buffers[buffer->read_index];
-        // 如果交互后还是空的，则说明没有数据，失败返回-1
-        if (r_buffer->len == 0) {
-            log_error("buffer中没有数据");
+    SubBuffer *r_buffer = buffer->sub_buffer_list[buffer->read_buffer_index];
+    // 判断缓存是否为空
+    if (r_buffer->len == 0)
+    {
+        // 互换缓冲区
+        sub_buffer_swap(buffer);
+        r_buffer = buffer->sub_buffer_list[buffer->read_buffer_index];
+        // 判断缓存是否为空
+        if (r_buffer->len == 0)
+        {
+            log_error("缓冲区中没有数据!!!");
             return -1;
         }
     }
-
-    // 读取数据长度
+    
+    // 读取数据
     int len = r_buffer->ptr[0];
-
-    // 判断容器大小是否足够
-    if (buf_size < len) {
-        log_error("容器大小不够");
+    // 判断容器大小是否满足
+    if (len > buf_size)
+    {
+        log_error("容器大小不够!!!");
         return -1;
     }
-
-    // 读取对应的数据，保存到data_buf
-    memcpy(data_buf, r_buffer->ptr+1, len);
-    // 将后面未读取的数据全部移到到起始位置
-    memmove(r_buffer->ptr, r_buffer->ptr+len+1, r_buffer->size-len-1);
-
-    // 更新小buffer中的len
+    
+    memcpy(read_data, r_buffer->ptr + 1, len);
+    // 读完以后将数据前移
+    memmove(r_buffer->ptr, r_buffer->ptr + len + 1, r_buffer->len - len - 1);
+    // 更新数据长度
     r_buffer->len -= len + 1;
-
-    // 解读锁
-    log_debug("解读锁");
+    log_debug("释放读锁");
     pthread_mutex_unlock(&buffer->read_lock);
-
-    // 返回读取的数据长度
+    // 返回读取数据的长度
     return len;
 }

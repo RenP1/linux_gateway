@@ -19,11 +19,11 @@ int main(int argc, char const *argv[])
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
 
+    // 打开正常日志文件流
+    open("std.log", O_CREAT | O_WRONLY | O_APPEND, 0644);
+
     // 打开错误日志文件流
     open("error.log", O_CREAT | O_WRONLY | O_APPEND, 0644);
-    
-    // 打开正常日志文件流
-    open("normal.log", O_CREAT | O_WRONLY | O_APPEND, 0644);
 
     // 使用标准输入(stdin)打印,获取到的字符串自带换行符(\n),FILE *一般用在库函数输入输出
     char name1[8];

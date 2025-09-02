@@ -13,6 +13,8 @@
         "string.h": "c",
         "stdio.h": "c",
         "pthread.h": "c",
-        "mqueue.h": "c"
+        "mqueue.h": "c",
+        "log.h": "c",
+        "app_buffer.h": "c"
     },
 }
