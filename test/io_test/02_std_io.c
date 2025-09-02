@@ -15,8 +15,8 @@
 
 int main(int argc, char const *argv[])
 {
-    // 关闭标准输入输出
-    close(STDIN_FILENO);
+    // 关闭标准输出和标准错误输出
+    close(STDERR_FILENO);
     close(STDOUT_FILENO);
 
     // 打开正常日志文件流
@@ -36,7 +36,7 @@ int main(int argc, char const *argv[])
 
     // 使用标准输入(STDIN_FILENO)打印
     char name2[8];
-    ssize_t len = read(STDIN_FILENO, name2, 8);
+    int len = read(STDIN_FILENO, name2, 8);
     printf("使用标准输入(STDIN_FILENO)打印: %.*s", len, name2);
     // 使用标准输出(STDOUT_FILENO)打印
     write(STDOUT_FILENO, "使用标准输出(STDOUT_FILENO)打印!!!\n", 43);
